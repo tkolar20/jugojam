@@ -19,6 +19,8 @@
   },
   "homepage": "https://github.com/tkolar20/jugojam-backend#readme",
   "dependencies": {
+    "kafkajs": "^2.2.4",
+    "readline-sync": "^1.4.10",
     "typescript": "^5.3.3"
   },
   "devDependencies": {
