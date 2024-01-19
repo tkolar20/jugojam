@@ -42,6 +42,17 @@ services:
       # The amount of memory to make available to Redpanda.
       # Mode dev-container uses well-known configuration properties for development in containers.
       - --mode dev-container
+      - --overprovisioned
+      - --set
+      - redpanda.cluster_id=turning-red
+      - --set 
+      - redpanda.enable_idempotence=true
+      - --set 
+      - redpanda.enable_transactions=true
+      - --set
+      - redpanda.auto_create_topics_enabled=true
+      - --node-id
+      - '0'
       # enable logs for debugging.
     volumes:
       - redpanda0:/var/lib/redpanda/data
@@ -52,7 +63,9 @@ services:
       - "127.0.0.1:19644:9644" #admin-api
       - 18081:18081
       - 18082:18082
-
+    healthcheck:
+      test: rpk cluster health
+  
   console:
     container_name: redpanda-console
     image: docker.redpanda.com/redpandadata/console:v2.3.8
@@ -75,4 +88,33 @@ services:
     ports:
       - "127.0.0.1:8080:8080"
     depends_on:
-    - redpanda0
+      redpanda0:
+        condition: service_healthy
+
+  ksqldb-server:
+    image: confluentinc/ksqldb-server:latest
+    hostname: ksqldb-server
+    container_name: ksqldb-server
+    networks:
+     - redpanda-net
+    depends_on:
+      - redpanda0
+    ports:
+      - "127.0.0.1:8088:8088"
+    environment:
+      KSQL_LISTENERS: "http://0.0.0.0:8088"
+      KSQL_BOOTSTRAP_SERVERS: "redpanda0:9092"
+      KSQL_KSQL_SCHEMA_REGISTRY_URL: "http://schema-registry:8081"
+      KSQL_KSQL_LOGGING_PROCESSING_STREAM_AUTO_CREATE: "true"
+      KSQL_KSQL_LOGGING_PROCESSING_TOPIC_AUTO_CREATE: "true"
+  
+  ksqldb-cli:
+    image: confluentinc/ksqldb-cli:latest
+    container_name: ksqldb-cli
+    networks:
+     - redpanda-net
+    depends_on:
+      - redpanda0
+      - ksqldb-server
+    entrypoint: /bin/sh
+    tty: true
