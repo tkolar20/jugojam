@@ -1,18 +1,20 @@
 import express from "express";
 import path from "path";
 import produce from "./producer.js";
-import consume from "./consumer.js";
 import fs from "fs";
 import EventEmitter from "events";
-import { ReadableStreamBuffer } from "stream-buffers";
-import { Server } from "socket.io";
-import Http from "http";
 import PriorityQueue from "./priority_queue.js";
+import axios from "axios";
+import { Stream } from "stream";
 
 const app = express();
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static('public'));
 const port = 4000;
-const server = Http.createServer(app);
-const io = new Server(server);
+//const server = Http.createServer(app);
+//const io = new Server(server);
+
+const url_query = 'http://ksqldb-server:8088/query';
 
 const eventEmitter = new EventEmitter();
 
@@ -21,6 +23,7 @@ var mes = [];
 
 const pq = new PriorityQueue();
 
+/*
 function generateRandomString(length) {
     const characters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let randomString = '';
@@ -35,24 +38,24 @@ function generateRandomString(length) {
   function sleep(millis) {
     return new Promise(resolve => setTimeout(resolve, millis));
   }
-  
+/*
 
-
+/*
 io.on('connection', (socket) => {
     console.log("A client has connected.");
-/*
+
     eventEmitter.on("dataAdded", () =>
     {
         const newFrame = pq.dequeue();
         console.log(newFrame.key);
         socket.emit("videoFrame", newFrame.message);
-    });*/
+    });
 
     socket.on('disconnect', () => {
       console.log('Client disconnected');
     });
   });
-
+*/
 
 
 /*app.get("/streaming", async (req, res) => 
@@ -163,30 +166,89 @@ app.get("/produce", async (req, res) =>
     res.send({ message: "producing" });  
 });
 
-app.get("/", async function (req, res)
+
+app.get("/", async (req, res) =>
 {
-    res.sendFile(path.resolve("html/index.html"));
-    const id = generateRandomString(5);
+    res.sendFile(path.resolve("public/index.html"));
+    /*const id = generateRandomString(5);
     const consumer = await consume(id);
-    console.log("I consume");
-    await sleep(4000);
-    consumer.run(
+    console.log("I consume");*/
+    //await sleep(4000);
+    /*consumer.run(
     {
         eachMessage: async ({topic, partition, message}) =>
         {
             const frame = message.value;
+            //console.log(message.value.toString());
+            //console.log("I consumed a message");
             //pq.enqueue({key: parseInt(message.key.toString()), message: message.value});
             //console.log(message.value.toString());
             //console.log(message.key.toString());
             //const newFrame = pq.dequeue();
             //console.log(newFrame.key);
-            io.emit("videoFrame", frame);
+            //io.emit("videoFrame", frame);
             //eventEmitter.emit("dataAdded");
         }
     });
+    consumer.seek({ topic: 'test-streaming', partition: 0, offset: "0" });*/
 });
 
-server.listen(4000, () =>
+app.get("/video", (req, res) =>
+{
+    const range = req.headers.range;
+    if (!range) {
+    res.status(400).end("Requires Range header");
+    }
+
+    const headers = {
+      'Accept': 'application/vnd.ksql.v1+json',
+    };
+
+    const path = "video/video.mp4";
+    const stat = fs.statSync(path);
+    const fileSize = stat.size;
+    const CHUNK_SIZE = 512 * 1024;
+    const start = Number(range.replace(/\D/g, ""));
+    const end = Math.min(start + CHUNK_SIZE, fileSize - 1);
+    const contentLength = end - start + 1;
+
+    console.log(start);
+    console.log(end);
+
+    const response_headers = {
+        "Content-Range": `bytes ${start}-${end}/${fileSize}`,
+        "Accept-Ranges": "bytes",
+        "Content-Length": contentLength,
+        "Content-Type": "video/mp4",
+      };
+
+    const ksql_query = "SELECT * FROM videodates;";
+    console.log(ksql_query);
+    const data = {
+      ksql: ksql_query,
+      streamsProperties: {},
+    };
+
+    axios.post(url_query, data, { headers })
+      .then(response => {
+        const allColumns = response.data.reduce((columns, obj) =>
+        {
+            const objColumns = obj.row ? obj.row.columns : [];
+            return columns.concat(objColumns);
+        }, []);
+        const combinedBuffer = Buffer.concat(allColumns.map(columnValue => Buffer.from(columnValue, 'base64')));
+        const trimmedBuffer = combinedBuffer.subarray(start, end+1);
+        var bufferStream = new Stream.PassThrough();
+        bufferStream.end(trimmedBuffer);
+        res.writeHead(206, response_headers);
+        bufferStream.pipe(res);
+      })
+      .catch(error => {
+        console.error(error);
+      });
+});
+
+app.listen(4000, () =>
 {
     console.log("Socket on port 4000");
 });

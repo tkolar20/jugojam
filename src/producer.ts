@@ -1,6 +1,5 @@
 import { Kafka } from "kafkajs";
 import fs from "fs";
-import path from "path";
 
 const produce = async() => 
 {
@@ -17,14 +16,13 @@ const produce = async() =>
 
     let movie_data;
     let path = "video/video.mp4";
-    //let index = 0;
-
+    
     const readStream = fs.createReadStream(path, {highWaterMark: 512*1024});
     readStream.on("data", (chunk) => 
     {
         producer.send(
             {
-                topic: "test-streaming",
+                topic: "test_streaming",
                 messages: 
                 [
                     {
@@ -33,7 +31,6 @@ const produce = async() =>
                     }
                 ],
             });
-        //index++;
     });
     
     readStream.on("end", () =>
