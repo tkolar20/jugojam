@@ -1,5 +1,5 @@
 import express from "express";
-import path from "path";
+import path, { resolve } from "path";
 import produce from "./producer.js";
 import fs from "fs";
 import EventEmitter from "events";
@@ -163,7 +163,7 @@ app.get("/produce", async (req, res) =>
     });*/
     res.setHeader("Content-type", "application/json");
     res.setHeader("Access-Control-Allow-Origin", "*");
-    res.send({ message: "producing" });  
+    res.send({ message: "producing" });
 });
 
 
@@ -196,12 +196,13 @@ app.get("/", async (req, res) =>
 app.get("/video", (req, res) =>
 {
     const range = req.headers.range;
-    if (!range) {
-    res.status(400).end("Requires Range header");
+    if (!range)
+    {
+        res.status(400).end("Requires Range header");
     }
 
     const headers = {
-      'Accept': 'application/vnd.ksql.v1+json',
+        'Accept': 'application/vnd.ksql.v1+json',
     };
 
     const path = "video/video.mp4";
@@ -220,37 +221,52 @@ app.get("/video", (req, res) =>
         "Accept-Ranges": "bytes",
         "Content-Length": contentLength,
         "Content-Type": "video/mp4",
-      };
+    };
 
     const ksql_query = "SELECT * FROM videodates;";
     console.log(ksql_query);
     const data = {
-      ksql: ksql_query,
-      streamsProperties: {},
+        ksql: ksql_query,
+        streamsProperties: {},
     };
 
     axios.post(url_query, data, { headers })
-      .then(response => {
-        const allColumns = response.data.reduce((columns, obj) =>
+        .then(response =>
         {
-            const objColumns = obj.row ? obj.row.columns : [];
-            return columns.concat(objColumns);
-        }, []);
-        const combinedBuffer = Buffer.concat(allColumns.map(columnValue => Buffer.from(columnValue, 'base64')));
-        const trimmedBuffer = combinedBuffer.subarray(start, end+1);
-        var bufferStream = new Stream.PassThrough();
-        bufferStream.end(trimmedBuffer);
-        res.writeHead(206, response_headers);
-        bufferStream.pipe(res);
-      })
-      .catch(error => {
-        console.error(error);
-      });
+            const allColumns = response.data.reduce((columns, obj) =>
+            {
+                const objColumns = obj.row ? obj.row.columns : [];
+                return columns.concat(objColumns);
+            }, []);
+            const combinedBuffer = Buffer.concat(allColumns.map(columnValue => Buffer.from(columnValue, 'base64')));
+            const trimmedBuffer = combinedBuffer.subarray(start, end + 1);
+            var bufferStream = new Stream.PassThrough();
+            bufferStream.end(trimmedBuffer);
+            res.writeHead(206, response_headers);
+            bufferStream.pipe(res);
+        })
+        .catch(error =>
+        {
+            console.error(error);
+        });
+});
+
+app.get("/api/videos", (req, res) =>
+{
+    const path = "video/info.json";
+    const info = JSON.parse(fs.readFileSync(path, 'utf-8'));
+    res.json(info);
+});
+
+app.get("/api/thumbnails/:id", (req, res) =>
+{
+    const id = req.params.id;
+    const path = resolve(`video/video${id}.jpg`);
+    res.sendFile(path);
 });
 
 app.listen(4000, () =>
 {
     console.log("Socket on port 4000");
 });
-  
-  
+
