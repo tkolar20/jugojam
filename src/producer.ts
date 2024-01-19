@@ -1,11 +1,11 @@
 import { Kafka } from "kafkajs";
 import fs from "fs";
 
-const produce = async () => 
+const produce = async (videoId: string) => 
 {
     const kafka = new Kafka(
         {
-            clientId: "test-app",
+            clientId: "producer" + videoId,
             brokers: ["redpanda0:9092"],
             requestTimeout: 25000,
             connectionTimeout: 3000,
@@ -14,15 +14,22 @@ const produce = async () =>
     const producer = kafka.producer();
     await producer.connect();
 
-    let movie_data;
-    let path = "video/video.mp4";
+    const admin = kafka.admin();
+    await admin.connect();
+    if(!await admin.createTopics({ waitForLeaders: true, topics: [{ topic: `video${videoId}` }] }))
+    {
+        return;
+    }
+
+    let path = `video/video${videoId}.mp4`;
+
 
     const readStream = fs.createReadStream(path, { highWaterMark: 512 * 1024 });
     readStream.on("data", (chunk) => 
     {
         producer.send(
             {
-                topic: "test_streaming",
+                topic: `video${videoId}`,
                 messages:
                     [
                         {

@@ -12,7 +12,7 @@ document.addEventListener("DOMContentLoaded", () =>
                 videoItem.classList.add("video-item");
 
                 const videoLink = document.createElement("a");
-                videoLink.href = `/videos/${video.id}`;
+                videoLink.href = `/player/${video.id}`;
                 videoLink.classList.add('video-link');
 
                 const videoThumbnail = document.createElement("img");
@@ -20,7 +20,7 @@ document.addEventListener("DOMContentLoaded", () =>
                 videoThumbnail.alt = video.title;
 
                 const videoTitle = document.createElement("a");
-                videoTitle.href = `/videos/${video.id}`;
+                videoTitle.href = `/player/${video.id}`;
                 videoTitle.textContent = video.title;
                 videoTitle.classList.add('video-title');
 

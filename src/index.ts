@@ -14,7 +14,8 @@ const port = 4000;
 //const server = Http.createServer(app);
 //const io = new Server(server);
 
-const url_query = 'http://ksqldb-server:8088/query';
+const url_query = "http://ksqldb-server:8088/query";
+const url_statement = "http://ksqldb-server:8088/ksql";
 
 const eventEmitter = new EventEmitter();
 
@@ -141,9 +142,34 @@ app.get("/file_streaming", (req, res) =>
 });*/
 
 
-app.get("/produce", async (req, res) =>
+app.get("/produce/:id", async (req, res) =>
 {
-    produce();/*
+    const id = req.params.id;
+    produce(id);
+    const ksql_request = `CREATE STREAM videodata${id} (value BYTES)
+    WITH (kafka_topic='video${id}', value_format='kafka', partitions=1);`;
+
+    console.log(ksql_request);
+    const data = {
+        ksql: ksql_request,
+        streamsProperties: {},
+    };
+
+    const headers = {
+        'Accept': 'application/vnd.ksql.v1+json',
+    };
+
+    axios.post(url_statement, data, { headers })
+        .then(response =>
+        {
+            console.log(response);
+        })
+        .catch(error =>
+        {
+            console.error(error);
+        });
+
+    /*
     cons.run(
     {
         eachMessage: async ({topic, partition, message}) =>
@@ -193,10 +219,11 @@ app.get("/", async (req, res) =>
     consumer.seek({ topic: 'test-streaming', partition: 0, offset: "0" });*/
 });
 
-app.get("/video", (req, res) =>
+app.get("/video/:id", (req, res) =>
 {
     const range = req.headers.range;
-    if (!range)
+    const id = req.params.id;
+    if(!range)
     {
         res.status(400).end("Requires Range header");
     }
@@ -205,7 +232,7 @@ app.get("/video", (req, res) =>
         'Accept': 'application/vnd.ksql.v1+json',
     };
 
-    const path = "video/video.mp4";
+    const path = `video/video${id}.mp4`;
     const stat = fs.statSync(path);
     const fileSize = stat.size;
     const CHUNK_SIZE = 512 * 1024;
@@ -216,14 +243,15 @@ app.get("/video", (req, res) =>
     console.log(start);
     console.log(end);
 
-    const response_headers = {
+    const response_headers =
+    {
         "Content-Range": `bytes ${start}-${end}/${fileSize}`,
         "Accept-Ranges": "bytes",
         "Content-Length": contentLength,
         "Content-Type": "video/mp4",
     };
 
-    const ksql_query = "SELECT * FROM videodates;";
+    const ksql_query = `SELECT * FROM videodata${id};`;
     console.log(ksql_query);
     const data = {
         ksql: ksql_query,
@@ -249,6 +277,16 @@ app.get("/video", (req, res) =>
         {
             console.error(error);
         });
+});
+
+app.get("/player/:id", (req, res) =>
+{
+    const id = req.params.id;
+    let html = fs.readFileSync(resolve("public/player.html"), "utf-8");
+    let tempHtml = html.replace("const id = 0", `const id = ${id}`);
+    let newHtml = tempHtml.replace("/video/x", `/video/${id}`);
+    res.contentType("html");
+    res.send(newHtml);
 });
 
 app.get("/api/videos", (req, res) =>
