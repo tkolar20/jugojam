@@ -39,7 +39,6 @@ services:
       # Redpanda brokers use the RPC API to communicate with eachother internally.
       - --rpc-addr redpanda0:33145
       - --advertise-rpc-addr redpanda0:33145
-      # The amount of memory to make available to Redpanda.
       # Mode dev-container uses well-known configuration properties for development in containers.
       - --mode dev-container
       - --overprovisioned
@@ -53,7 +52,6 @@ services:
       - redpanda.auto_create_topics_enabled=true
       - --node-id
       - '0'
-      # enable logs for debugging.
     volumes:
       - redpanda0:/var/lib/redpanda/data
     networks:
