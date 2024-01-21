@@ -18,14 +18,15 @@ app.get("/produce/:id", async (req, res) =>
 {
     const id = req.params.id;
     produce(id);
+
     const ksql_request = `CREATE STREAM videodata${id} (value BYTES)
     WITH (kafka_topic='video${id}', value_format='kafka', partitions=1);`;
 
-    console.log(ksql_request);
     const data = {
         ksql: ksql_request,
         streamsProperties: {},
     };
+
 
     const headers = {
         'Accept': 'application/vnd.ksql.v1+json',
@@ -40,6 +41,8 @@ app.get("/produce/:id", async (req, res) =>
         {
             console.error(error);
         });
+
+    console.log(ksql_request);
     res.setHeader("Content-type", "application/json");
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.send({ message: "producing" });
@@ -72,9 +75,6 @@ app.get("/video/:id", (req, res) =>
     const end = Math.min(start + CHUNK_SIZE, fileSize - 1);
     const contentLength = end - start + 1;
 
-    console.log(start);
-    console.log(end);
-
     const response_headers =
     {
         "Content-Range": `bytes ${start}-${end}/${fileSize}`,
@@ -84,7 +84,7 @@ app.get("/video/:id", (req, res) =>
     };
 
     const ksql_query = `SELECT * FROM videodata${id};`;
-    console.log(ksql_query);
+
     const data = {
         ksql: ksql_query,
         streamsProperties: {},
@@ -109,6 +109,8 @@ app.get("/video/:id", (req, res) =>
         {
             console.error(error);
         });
+
+    console.log(ksql_query);
 });
 
 app.get("/player/:id", (req, res) =>
