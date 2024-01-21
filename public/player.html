@@ -4,6 +4,30 @@
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>JugoJam</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background-color: #f0f0f0;
+    }
+
+    .video-container {
+      position: relative;
+      overflow: hidden;
+      width: 80%;
+      max-width: 800px;
+    }
+
+    .video-container video {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+  </style>
   <script>
     const id = 0;
     fetch(`/produce/${id}`);
@@ -11,15 +35,17 @@
 </head>
 
 <body>
-  <video id="videoPlayer" class="video-js" controls autoplay="false" muted="muted" width="640" height="264"
-    data-setup="{}">
-    <p class="vjs-no-js">
-      To view this video please enable JavaScript, and consider upgrading to a
-      web browser that
-      <a href="https://videojs.com/html5-video-support/" target="_blank">supports HTML5 video</a>
-    </p>
-    <source src="/video/x" type="video/mp4" />
-  </video>
+  <div class="video-container">
+    <video id="videoPlayer" class="video-js" controls autoplay="false" muted="muted" width="640" height="264"
+      data-setup="{}">
+      <p class="vjs-no-js">
+        To view this video please enable JavaScript, and consider upgrading to a
+        web browser that
+        <a href="https://videojs.com/html5-video-support/" target="_blank">supports HTML5 video</a>
+      </p>
+      <source src="/video/x" type="video/mp4" />
+    </video>
+  </div>
 </body>
 
 </html>
